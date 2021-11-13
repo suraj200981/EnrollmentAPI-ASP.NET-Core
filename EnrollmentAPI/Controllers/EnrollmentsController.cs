@@ -13,6 +13,7 @@ using Microsoft.Azure.Documents.Client;
 using System.Linq;
 using Microsoft.Azure.Documents.Linq;
 using System.Net.Http;
+using Microsoft.Azure.Documents;
 
 namespace EnrollmentAPI
 {
@@ -48,6 +49,7 @@ namespace EnrollmentAPI
 
             return _docmentClient.CreateDocumentQuery<enrollmentModel>(UriFactory.CreateDocumentCollectionUri("database-enrollment", "Enrollments"),
                 new FeedOptions { MaxItemCount = 1 }).Where((i) => i.Id == enrollmentID);
+
         }
 
 
@@ -74,30 +76,19 @@ namespace EnrollmentAPI
 
         //Delete enrollments
         [FunctionName("DeleteEnrollment")]
-        public static async Task<IActionResult> DeleteEnrollmentAsync(
-          [HttpTrigger(AuthorizationLevel.Function, "delete", Route = null)] HttpRequest req,
-          [CosmosDB(ConnectionStringSetting = "CosmosDB")]
-           DocumentClient _docmentClient,
-          ILogger log, string Id
-
-        )
+        public static async Task<IActionResult> DeleteEnrollment(
+            [HttpTrigger(AuthorizationLevel.Function, "delete")] HttpRequest req,
+            [CosmosDB(databaseName: "database-enrollment", collectionName: "Enrollments", Id = "{Query.id}", PartitionKey = "{Query.id}", ConnectionStringSetting = "CosmosDB")] Document document,
+            [CosmosDB(databaseName: "database-enrollment", collectionName: "Enrollments", ConnectionStringSetting = "CosmosDB")] DocumentClient client)
         {
+            string enrollmentID = req.Query["id"];
 
-            var option = new FeedOptions { EnableCrossPartitionQuery = true };
+            if (document == null || string.IsNullOrEmpty(enrollmentID))
+                return new BadRequestResult();
 
-            var response = _docmentClient.CreateDocumentQuery<enrollmentModel>(UriFactory.CreateDocumentCollectionUri("database-enrollment", "Enrollments"), option).Where((i) => i.Id == Id)
-                 .AsEnumerable().FirstOrDefault();
-
-
-            if (response == null)
-            {
-                return new NotFoundResult();
-            }
-
-           
+            await client.DeleteDocumentAsync(document.SelfLink, new RequestOptions() { PartitionKey = new PartitionKey(enrollmentID) });
 
             return new OkResult();
-
         }
     }
 }

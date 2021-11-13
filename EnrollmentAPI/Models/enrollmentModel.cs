@@ -9,6 +9,10 @@ namespace EnrollmentAPI.Models
     {
         [JsonProperty(PropertyName = "id")]
         public string Id { get; set; }
+
+        [JsonProperty(PropertyName = "enrollmentchannel")]
+        public string EnrollmentChannel { get; set; }
+
         [JsonProperty(PropertyName = "firstname")]
 
         public string FirstName { get; set; }
